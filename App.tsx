@@ -1,20 +1,25 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import AppNavigator from './src/Navigation/AppNavigator';
+import AppLoading from 'expo-app-loading';
+import * as Font from 'expo-font';
 
 export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
-}
+  const [fontsLoaded, setFontsLoaded] = React.useState(false);
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+  React.useEffect(() => {
+    async function loadFonts() {
+      await Font.loadAsync({
+        'PressStart2P': require('./assets/fonts/PressStart2P-Regular.ttf'),
+      });
+      setFontsLoaded(true);
+    }
+    loadFonts();
+  }, []);
+
+  if (!fontsLoaded) {
+    return <AppLoading />;
+  }
+
+  // ✅ No NavigationContainer here — AppNavigator already has it
+  return <AppNavigator />;
+}
