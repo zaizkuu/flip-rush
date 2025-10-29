@@ -9,7 +9,7 @@ import GameScreen from '../screens/GameScreen';
 export type RootStackParamList = {
   MainMenu: undefined;
   LevelSelect: undefined;
-  Game: undefined;
+  GameScreen: { level: number }; // ✅ expects a level param
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -20,7 +20,7 @@ export default function AppNavigator() {
       <Stack.Navigator initialRouteName="MainMenu" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="MainMenu" component={MainMenu} />
         <Stack.Screen name="LevelSelect" component={LevelSelect} />
-        <Stack.Screen name="Game" component={GameScreen} />
+        <Stack.Screen name="GameScreen" component={GameScreen} /> 
       </Stack.Navigator>
     </NavigationContainer>
   );
