@@ -1,25 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import AppNavigator from './src/Navigation/AppNavigator';
-import AppLoading from 'expo-app-loading';
 import * as Font from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { SoundProvider } from './src/context/SoundContext';
+
+SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-  const [fontsLoaded, setFontsLoaded] = React.useState(false);
+  const [fontsLoaded, setFontsLoaded] = useState(false);
 
-  React.useEffect(() => {
-    async function loadFonts() {
+  useEffect(() => {
+    async function loadResources() {
       await Font.loadAsync({
         'PressStart2P': require('./assets/fonts/PressStart2P-Regular.ttf'),
       });
       setFontsLoaded(true);
+      await SplashScreen.hideAsync();
     }
-    loadFonts();
+    loadResources();
   }, []);
 
   if (!fontsLoaded) {
-    return <AppLoading />;
+    return null; // Wait until fonts are loaded
   }
 
-  // ✅ No NavigationContainer here — AppNavigator already has it
-  return <AppNavigator />;
+  return (
+    <SoundProvider>
+      <AppNavigator />
+    </SoundProvider>
+  );
 }

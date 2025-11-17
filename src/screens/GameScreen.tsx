@@ -96,49 +96,47 @@ export default function GameScreen({ navigation, route }: any) {
   };
 
   const initGame = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (reshuffleRef.current) clearInterval(reshuffleRef.current);
+  if (timerRef.current) clearInterval(timerRef.current);
 
-    setCards(buildDeck());
-    setFlippedIndices([]);
-    setTimeLeft(levelTime);
-    setScore(0);
-    setShowLoseModal(false);
-    setShowWinModal(false);
-    setShowQuestionModal(false);
+  // Shuffle once at game start
+  setCards(buildDeck()); // buildDeck should internally shuffle the cards
 
-    if (level !== 9999) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev === 11) {
-            const randomQ = quizQuestions[Math.floor(Math.random() * quizQuestions.length)];
-            setCurrentQuestion(randomQ);
-            setShowQuestionModal(true);
-            setQuestionTimeLeft(15);
-            setQuestionAnswered(false);
-          }
-          if (prev <= 1) {
-            clearInterval(timerRef.current!);
-            clearInterval(reshuffleRef.current!);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
+  setFlippedIndices([]);
+  setTimeLeft(levelTime);
+  setScore(0);
+  setShowLoseModal(false);
+  setShowWinModal(false);
+  setShowQuestionModal(false);
 
-    reshuffleRef.current = setInterval(() => {
-      setCards(prev => shuffleArray([...prev]));
-    }, shuffleInterval * 1000);
-  };
+  if (level !== 9999) {
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev === 11) {
+          const randomQ = quizQuestions[Math.floor(Math.random() * quizQuestions.length)];
+          setCurrentQuestion(randomQ);
+          setShowQuestionModal(true);
+          setQuestionTimeLeft(15);
+          setQuestionAnswered(false);
+        }
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }
+};
+
 
   useEffect(() => {
-    initGame();
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (reshuffleRef.current) clearInterval(reshuffleRef.current);
-    };
-  }, [level]);
+  initGame(); // reshuffles once when level changes
+  return () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    // reshuffleRef removed — no periodic reshuffling
+  };
+}, [level]);
+
 
   useEffect(() => {
     if (timeLeft === 0 && !showWinModal && level !== 9999) {
