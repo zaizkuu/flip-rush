@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, Dimensions, BackHandler } from 'react-native';
 import { Audio } from 'expo-av';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../Navigation/AppNavigator';
-import { useSound } from '../context/SoundContext'; // ✅ use global sound context
+import { useSound } from '../context/SoundContext'; 
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MainMenu'>;
 
@@ -12,26 +12,30 @@ const BUTTON_WIDTH = Math.min(width * 0.65, 300);
 
 export default function MainMenu({ navigation }: Props) {
   const [bgSound, setBgSound] = useState<Audio.Sound | null>(null);
-  const { soundEnabled } = useSound(); // ✅ global sound toggle
+  const { soundEnabled } = useSound(); 
 
-  // ✅ Background music logic
+  // --- Background Music Logic ---
   useEffect(() => {
     let isMounted = true;
 
     async function setupMusic() {
       if (bgSound) {
-        await bgSound.unloadAsync(); // 🔁 stop previous sound
+        await bgSound.unloadAsync(); 
         setBgSound(null);
       }
 
       if (soundEnabled) {
-        const { sound } = await Audio.Sound.createAsync(
-          require('../../assets/sounds/mainmenuBG.mp3'),
-          { shouldPlay: true, isLooping: true }
-        );
-        if (isMounted) {
-          setBgSound(sound);
-          await sound.playAsync();
+        try {
+          const { sound } = await Audio.Sound.createAsync(
+            require('../../assets/sounds/mainmenuBG.mp3'),
+            { shouldPlay: true, isLooping: true }
+          );
+          if (isMounted) {
+            setBgSound(sound);
+            await sound.playAsync();
+          }
+        } catch (error) {
+          console.log("Error loading BG music:", error);
         }
       }
     }
@@ -46,20 +50,34 @@ export default function MainMenu({ navigation }: Props) {
     };
   }, [soundEnabled]);
 
-  // ✅ Button click sound
+  // --- Button Sound Helper ---
   async function playSelectSound() {
     if (!soundEnabled) return;
-    const { sound } = await Audio.Sound.createAsync(
-      require('../../assets/sounds/select.mp3')
-    );
-    await sound.playAsync();
-    sound.setOnPlaybackStatusUpdate((status) => {
-      if (!status.isLoaded) return;
-      if (status.didJustFinish) {
-        sound.unloadAsync();
-      }
-    });
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require('../../assets/sounds/select.mp3')
+      );
+      await sound.playAsync();
+      
+      // Unload sound from memory when done playing
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+        }
+      });
+    } catch (error) {
+      console.log("Error playing select sound:", error);
+    }
   }
+
+  // --- Handle Exit ---
+  const handleExit = () => {
+    playSelectSound();
+    // Small delay to allow the sound to play before closing
+    setTimeout(() => {
+      BackHandler.exitApp();
+    }, 400); 
+  };
 
   return (
     <ImageBackground
@@ -72,6 +90,8 @@ export default function MainMenu({ navigation }: Props) {
       </View>
 
       <View style={styles.buttonsWrapper}>
+        
+        {/* START BUTTON - Goes to Level Select */}
         <TouchableOpacity
           style={[styles.button, styles.startButton]}
           onPress={async () => {
@@ -82,6 +102,7 @@ export default function MainMenu({ navigation }: Props) {
           <Text style={styles.startText}>START</Text>
         </TouchableOpacity>
 
+        {/* SETTINGS BUTTON */}
         <TouchableOpacity
           style={[styles.button, styles.settingsButton]}
           onPress={async () => {
@@ -92,12 +113,14 @@ export default function MainMenu({ navigation }: Props) {
           <Text style={styles.settingsText}>SETTINGS</Text>
         </TouchableOpacity>
 
+        {/* EXIT BUTTON - Now Works! */}
         <TouchableOpacity
           style={[styles.button, styles.exitButton]}
-          onPress={playSelectSound}
+          onPress={handleExit}
         >
           <Text style={styles.exitText}>EXIT</Text>
         </TouchableOpacity>
+
       </View>
     </ImageBackground>
   );
