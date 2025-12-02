@@ -1,13 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // ✅ Import AsyncStorage
+import AsyncStorage from '@react-native-async-storage/async-storage'; 
 import { useSound } from '../context/SoundContext'; 
 
 export default function SettingsScreen() {
   const navigation = useNavigation();
   const { soundEnabled, toggleSound } = useSound();
-  const [darkMode, setDarkMode] = React.useState(false); 
 
   // --- Handle Reset Logic ---
   const handleResetProgress = () => {
@@ -21,11 +20,12 @@ export default function SettingsScreen() {
         },
         {
           text: "Reset",
-          style: "destructive", // Red color on iOS
+          style: "destructive", 
           onPress: async () => {
             try {
               await AsyncStorage.removeItem('HIGHEST_LEVEL_UNLOCKED');
-              Alert.alert("Success", "Progress has been reset to Level 1.");
+              await AsyncStorage.removeItem('KNOWLEDGE_TEST_CORRECT'); 
+              Alert.alert("Success", "Progress has been reset.");
             } catch (error) {
               console.error("Error resetting progress", error);
               Alert.alert("Error", "Failed to reset progress.");
@@ -51,17 +51,6 @@ export default function SettingsScreen() {
         />
       </View>
 
-      {/* 🎨 Theme toggle */}
-      <View style={styles.optionRow}>
-        <Text style={styles.optionText}>Dark Mode</Text>
-        <Switch
-          value={darkMode}
-          onValueChange={setDarkMode}
-          thumbColor={darkMode ? '#7b2cff' : '#888'}
-          trackColor={{ false: '#444', true: '#555' }}
-        />
-      </View>
-
       {/* ⚠️ Reset Progress Section */}
       <View style={styles.divider} />
       <Text style={styles.sectionHeader}>DATA MANAGEMENT</Text>
@@ -71,7 +60,10 @@ export default function SettingsScreen() {
       </TouchableOpacity>
 
       {/* 🔙 Back button */}
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+      <TouchableOpacity 
+        style={styles.backButton} 
+        onPress={() => navigation.goBack()}
+      >
         <Text style={styles.backText}>BACK</Text>
       </TouchableOpacity>
     </View>

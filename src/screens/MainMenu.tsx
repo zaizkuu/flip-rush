@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ImageBackground, Dimensions, BackHandler } from 'react-native';
 import { Audio } from 'expo-av';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -11,44 +11,57 @@ const { width, height } = Dimensions.get('window');
 const BUTTON_WIDTH = Math.min(width * 0.65, 300);
 
 export default function MainMenu({ navigation }: Props) {
-  const [bgSound, setBgSound] = useState<Audio.Sound | null>(null);
+  const bgSoundRef = useRef<Audio.Sound | null>(null);
   const { soundEnabled } = useSound(); 
 
-  // --- Background Music Logic ---
+  // --- Background Music Logic (Fixed Race Condition) ---
   useEffect(() => {
-    let isMounted = true;
+    let isCancelled = false; // 1. Track if effect is cleaned up
 
-    async function setupMusic() {
-      if (bgSound) {
-        await bgSound.unloadAsync(); 
-        setBgSound(null);
+    const manageMusic = async () => {
+      // Unload any existing sound first
+      if (bgSoundRef.current) {
+        try {
+          await bgSoundRef.current.stopAsync();
+          await bgSoundRef.current.unloadAsync();
+          bgSoundRef.current = null;
+        } catch (e) { /* ignore */ }
       }
 
+      // If sound is ON, try to load and play
       if (soundEnabled) {
         try {
           const { sound } = await Audio.Sound.createAsync(
             require('../../assets/sounds/mainmenuBG.mp3'),
             { shouldPlay: true, isLooping: true }
           );
-          if (isMounted) {
-            setBgSound(sound);
+
+          // 2. ONLY play if the user hasn't turned off sound while loading
+          if (!isCancelled && soundEnabled) {
+            bgSoundRef.current = sound;
             await sound.playAsync();
+          } else {
+            // If cancelled, unload immediately
+            await sound.unloadAsync();
           }
         } catch (error) {
           console.log("Error loading BG music:", error);
         }
       }
-    }
+    };
 
-    setupMusic();
+    manageMusic();
 
+    // Cleanup function
     return () => {
-      isMounted = false;
-      if (bgSound) {
-        bgSound.unloadAsync();
+      isCancelled = true; // Mark as cancelled
+      if (bgSoundRef.current) {
+        bgSoundRef.current.stopAsync();
+        bgSoundRef.current.unloadAsync();
+        bgSoundRef.current = null;
       }
     };
-  }, [soundEnabled]);
+  }, [soundEnabled]); // Re-run when toggle changes
 
   // --- Button Sound Helper ---
   async function playSelectSound() {
@@ -59,7 +72,6 @@ export default function MainMenu({ navigation }: Props) {
       );
       await sound.playAsync();
       
-      // Unload sound from memory when done playing
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
           sound.unloadAsync();
@@ -73,7 +85,6 @@ export default function MainMenu({ navigation }: Props) {
   // --- Handle Exit ---
   const handleExit = () => {
     playSelectSound();
-    // Small delay to allow the sound to play before closing
     setTimeout(() => {
       BackHandler.exitApp();
     }, 400); 
@@ -91,7 +102,6 @@ export default function MainMenu({ navigation }: Props) {
 
       <View style={styles.buttonsWrapper}>
         
-        {/* START BUTTON - Goes to Level Select */}
         <TouchableOpacity
           style={[styles.button, styles.startButton]}
           onPress={async () => {
@@ -102,7 +112,6 @@ export default function MainMenu({ navigation }: Props) {
           <Text style={styles.startText}>START</Text>
         </TouchableOpacity>
 
-        {/* SETTINGS BUTTON */}
         <TouchableOpacity
           style={[styles.button, styles.settingsButton]}
           onPress={async () => {
@@ -113,7 +122,16 @@ export default function MainMenu({ navigation }: Props) {
           <Text style={styles.settingsText}>SETTINGS</Text>
         </TouchableOpacity>
 
-        {/* EXIT BUTTON - Now Works! */}
+        <TouchableOpacity
+          style={[styles.button, styles.aboutButton]}
+          onPress={async () => {
+            await playSelectSound();
+            navigation.navigate('AboutUs');
+          }}
+        >
+          <Text style={styles.aboutText}>ABOUT US</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.button, styles.exitButton]}
           onPress={handleExit}
@@ -128,21 +146,26 @@ export default function MainMenu({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center' },
-  titleWrapper: { position: 'absolute', top: height * 0.23 },
+  titleWrapper: { position: 'absolute', top: height * 0.18 },
   title: { fontFamily: 'PressStart2P', fontSize: 44, color: '#fff' },
-  buttonsWrapper: { flex: 1, justifyContent: 'center', marginTop: height * 0.3 },
+  buttonsWrapper: { flex: 1, justifyContent: 'center', marginTop: height * 0.25 },
   button: {
     width: BUTTON_WIDTH,
-    paddingVertical: 28,
-    marginVertical: 20,
+    paddingVertical: 20,
+    marginVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 4,
   },
   startButton: { backgroundColor: '#fff', borderColor: '#000' },
   startText: { fontFamily: 'PressStart2P', fontSize: 20, color: '#7b2cff' },
-  settingsButton: { backgroundColor: '#222', borderColor: '#fff' },
+  
+  settingsButton: { backgroundColor: '#000', borderColor: '#fff' },
   settingsText: { fontFamily: 'PressStart2P', fontSize: 20, color: '#fff' },
+
+  aboutButton: { backgroundColor: '#000', borderColor: '#aaa' },
+  aboutText: { fontFamily: 'PressStart2P', fontSize: 20, color: '#ddd' },
+
   exitButton: { backgroundColor: '#000', borderColor: '#000' },
   exitText: { fontFamily: 'PressStart2P', fontSize: 20, color: '#fff' },
 });
